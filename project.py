@@ -1,5 +1,4 @@
 import database
-import webbrowser
 import socket
 import numpy
 import select
@@ -34,20 +33,22 @@ def server(database):
                 if data == "":
                     open_client_sockets.remove(current_socket)
                 else:
-                    if data[:9]=="download ":
-                        data=data[9:]
-                        data=database.get_url(data)
+                    platform = data.split()[-1]
+                    data = data[:-(len(platform) + 1)]
+                    if data[:9] == "download ":
+                        data = data[9:]
+                        data = database.get_url(data, platform)
                         messages_to_send.append((current_socket, data))
                     else:
-                        data="unknown request"
+                        data = "unknown request"
                         messages_to_send.append((current_socket, data))
         send_waiting_messages(wlist, messages_to_send)
 
 
 def main():
     d = database.DataBase()
-    # webbrowser.open("https://www.python.org/ftp/python/2.7.13/python-2.7.13.msi")
     server(d)
+
 
 if __name__ == '__main__':
     main()
