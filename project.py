@@ -51,12 +51,31 @@ def server(database):
                 if data == "":
                     open_client_sockets.remove(current_socket)
                 else:
-                    platform = data.split()[-1]
-                    data = data[:-(len(platform) + 1)]
                     if data[:9] == "download ":
+                        platform = data.split()[-1]
+                        data = data[:-(len(platform) + 1)]
                         data = data[9:]
                         data = database.get_url(data, platform)
                         messages_to_send.append((current_socket, data))
+                    elif data[:4] == "add ":
+                        data = data[4:]
+                        data = data.split(",")
+                        print data
+                        if len(data) == 4 and "" not in data:
+                            database.add_to_table(data[0],
+                                                  data[1],
+                                                  data[2],
+                                                  data[3])
+                            messages_to_send.append((current_socket,
+                                                     "thank you!"))
+                        elif "" not in data:
+                            database.add_to_table(data[0], data[1], data[2])
+                            messages_to_send.append((current_socket,
+                                                     "thank you!"))
+                        else:
+                            messages_to_send.append((current_socket,
+                                                     "you are evil!!!!"))
+                        database.print_table("downloads_websites_urls")
                     else:
                         data = "unknown request"
                         messages_to_send.append((current_socket, data))

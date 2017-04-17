@@ -15,6 +15,7 @@ class DataBase:
     """
     creates the database and control it
     """
+
     def get_url_list(self, download_name):
         """
         return the urls for your app
@@ -77,59 +78,93 @@ class DataBase:
             return "no urls for your platform, sorry"
         return "ok" + best_url
 
-    def create_first_table(self, cursor):
+    def create_first_table(self):
         """
         create a table
-        @param cursor: the database's cursor
         """
-        cursor.execute("""
+        self.cursor.execute("""
             CREATE TABLE downloads_websites_urls
                         (download_name TEXT PRIMARY KEY,
                          website_name TEXT,url TEXT)
             """)
-        cursor.execute("INSERT INTO downloads_websites_urls "
-                       "VALUES ('python','https://www.python.org',"
-                       "'https://www.python.org/ftp/python/2.7.13/"
-                       "python-2.7.13.msi,"
-                       "https://www.python.org/ftp/python/2.7.13/"
-                       "python-2.7.13-macosx10.6.pkg')")
 
-    def create_second_table(self, cursor):
+    def create_second_table(self):
         """
         create a table
-        @param cursor: the database's cursor
         """
-        cursor.execute("""
+        self.cursor.execute("""
             CREATE TABLE urls_devices_rating
                         (url TEXT PRIMARY KEY, device_or_devices TEXT,
                          rating_number_of_people)
             """)
-        cursor.execute("INSERT INTO urls_devices_rating "
-                       "VALUES ('https://www.python.org/ftp/"
-                       "python/2.7.13/python-2.7.13.msi','Windows','5,1')")
-        cursor.execute("INSERT INTO urls_devices_rating "
-                       "VALUES ('https://www.python.org/ftp/"
-                       "python/2.7.13/python-2.7.13-macosx10.6.pkg'"
-                       ",'Mac','3,1')")
+
+    def add_to_table(self, download_name, url, platform, website=None):
+        """
+        add to both tables the new download
+        @param download_name: the name of the
+        application that you want to download
+        @param url the new url
+        @param platform: your platform (windows,mac...)
+        @param website: the website from which the
+        download was taken from
+        """
+        conn = sqlite3.connect(DATABASE_FILE)
+        self.cursor = conn.cursor()
+        if website is None:
+            website = ""
+        try:
+            self.cursor.execute("INSERT INTO downloads_websites_urls "
+                                "VALUES ('%s','%s','%s,')"
+                                % (download_name, website, url))
+            self.cursor.execute("INSERT INTO urls_devices_rating "
+                                "VALUES ('%s','%s','5,1')" % (url, platform))
+        except sqlite3.IntegrityError:
+            current_url = self.cursor.execute("SELECT url "
+                                              "FROM downloads_"
+                                              "websites_urls WHERE "
+                                              "download_name='%s'"
+                                              % download_name)
+            new_url = current_url.fetchall()[0][0] + url + ","
+            if not website:
+                website = self.cursor.execute("SELECT website_name "
+                                              "FROM downloads_"
+                                              "websites_urls WHERE "
+                                              "download_name='%s'"
+                                              % download_name)
+                website = website.fetchall()[0][0]
+            self.cursor.execute("UPDATE downloads_websites_urls"
+                                " SET website_name='%s',"
+                                " url='%s' WHERE download_name='%s'"
+                                % (website, new_url, download_name))
+            self.cursor.execute("INSERT INTO urls_devices_rating "
+                                "VALUES ('%s','%s','5,1')"
+                                % (new_url, platform))
+        conn.commit()
+        conn.close()
 
     def __init__(self):
         if not os.path.exists(DATABASE_FILE):
             conn = sqlite3.connect(DATABASE_FILE)
-            cursor = conn.cursor()
+            self.cursor = conn.cursor()
             # create table
-            self.create_first_table(cursor)
+            self.create_first_table()
             # create table
-            self.create_second_table(cursor)
+            self.create_second_table()
             conn.commit()
             # close the file
             conn.close()
+            self.add_to_table("python",
+                              "https://www.python.org/ftp/python"
+                              "/2.7.13/python-2.7.13.msi",
+                              "Windows", "https://www.python.org")
 
-
-def print_table(cursor, table_name):
-    """
-    print a sql table
-    @param cursor: the database's cursor
-    @param table_name: the table you would like to print
-    """
-    cursor.execute("SELECT * FROM %s" % table_name)
-    print(cursor.fetchall())
+    def print_table(self, table_name):
+        """
+        print a sql table
+        @param table_name: the table you would like to print
+        """
+        conn = sqlite3.connect(DATABASE_FILE)
+        self.cursor = conn.cursor()
+        self.cursor.execute("SELECT * FROM %s" % table_name)
+        print(self.cursor.fetchall())
+        conn.close()
