@@ -55,8 +55,12 @@ def server(database):
                         platform = data.split()[-1]
                         data = data[:-(len(platform) + 1)]
                         data = data[9:]
-                        data = database.get_url(data, platform)
-                        messages_to_send.append((current_socket, data))
+                        data=data.replace(" ","")
+                        url = database.get_url(data, platform)
+                        if url[:2]!="ok":
+                            url="CHOCO"+"http://chocolatey.org/api/v2/package/"+data
+                        print url
+                        messages_to_send.append((current_socket, url))
                     elif data[:4] == "add ":
                         data = data[4:]
                         data = data.split(",")
