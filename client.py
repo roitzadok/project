@@ -11,10 +11,21 @@ import socket
 import numpy
 import platform
 import webbrowser
-
+import zipfile
 
 MY_PLATFORM = platform.system()
 BUFF_SIZE = numpy.getbufsize()
+
+
+def unzip(file_path, file_dst):
+    """
+    unzip a nupkg file
+    @param file_path: the zip file path
+    @param file_dst: where to unzip to
+    """
+    zip_ref = zipfile.ZipFile(file_path)
+    zip_ref.extractall(file_dst)
+    zip_ref.close()
 
 
 def try_to_download_from_choco(client_socket, file_name):
@@ -24,22 +35,22 @@ def try_to_download_from_choco(client_socket, file_name):
     @param file_name: the download's name
     @param client_socket: pass it to add_to_database
     """
-    req = urllib2.Request(url='http://chocolatey.org/api/v2/package/' + file_name)
+    req = urllib2.Request(url='http://chocolatey.org/api/v2/package/' +
+                              file_name)
     f = urllib2.urlopen(req)
-    file = open(file_name + ".nupkg", "w+")
+    file = open(file_name + ".nupkg", "wb+")
     file.write(f.read())
     file.close()
-    os.rename(file_name + ".nupkg", file_name + ".rar")
-    # unrar here into file name!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
-    os.remove(file_name + ".rar")  # keep this line!!!!!!
+    unzip(file_name + ".nupkg", file_name)
+    os.remove(file_name + ".nupkg")
     url_file_dir = os.getcwd() + "\\" + file_name + r"\tools\chocolateyInstall"
     os.rename(url_file_dir + ".ps1", url_file_dir + ".txt")
     file = open(url_file_dir + ".txt", "r")
-    contant = file.read()
+    content = file.read()
     file.close()
-    contant = contant.split("\n")
+    content = content.split("\n")
     url_lines = []
-    for line in contant:
+    for line in content:
         if "url" in line:
             url_lines.append(line)
     url = url_lines[0].split("'")[1]
@@ -111,7 +122,8 @@ def add_to_database(download_name, url, platform, website, client_socket):
     @param client_socket: the socket to which
     we send the new url
     """
-    data_to_send = "add " + download_name + "," + url + "," + platform + "," + website
+    data_to_send = "add " + download_name + "," + url + \
+                   "," + platform + "," + website
     client_socket.send(data_to_send)
 
 
